@@ -1,5 +1,6 @@
 import sys
 import pygame
+from pygame.locals import *
 import color
 
 WIDTH = 800
@@ -7,15 +8,16 @@ HEIGHT = 800
 
 class MathPractice:
     """Main class"""
-    """Practicing geometry with pygame - draw graphs, plot points, explore math!"""
+    """Practicing geometry with pygame - draw graphs, plot points, explore MATH!"""
 
     def __init__(self, width = WIDTH, height = HEIGHT):
 
         #initialize settings
         self.background_color = color.WHITE
         self.graph_size = 4
-        self.graph_color = color.GREEN
+        self.graph_color = color.BLACK
         self.point_color = color.BLUE
+        #pause to admire y=mx+b making itself useful for scaling function
         self.point_size = int((-.2 * self.graph_size) + 12)
 
         #initialize display
@@ -23,12 +25,15 @@ class MathPractice:
         self.width = width
         self.height = height
         self.screen = pygame.display.set_mode((self.width, self.height))
+        self.background = pygame.Surface(self.screen.get_size())
+        self.background = self.background.convert()
+
 
         #initialize graph's subsurface
         self.graph = Graph(self.graph_size)
         offset_x = self.width - .9 * self.width
         offset_y = self.height -.9 * self.height
-        self.graph_surface = self.screen.subsurface(pygame.Rect(offset_x, offset_y, self.width - offset_x*2, self.height - offset_y*2))
+        self.graph_surface = self.background.subsurface(pygame.Rect(offset_x, offset_y, self.width - offset_x*2, self.height - offset_y*2))
 
 
 
@@ -38,21 +43,32 @@ class MathPractice:
 
         @type self: object
         """
-        self.background = pygame.Surface(self.screen.get_size())
-        self.background = self.background.convert()
-        self.background.fill(self.background_color)
+
+        self.graph.add_point(3,1)
 
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     sys.exit()
-
+                if event.type == KEYDOWN:
+                    if event.key == K_1:
+                        self.graph.toggle_circle()
+                    if event.key == K_EQUALS:
+                        #TODO bugs out of precise point location when length > 12
+                        if self.graph.length < 12:
+                            self.resize_graph(2)
+                    if event.key == K_MINUS:
+                        if self.graph.length > 2:
+                            self.resize_graph(-2)
             self.draw_screen()
+            self.screen.blit(self.background, (0,0))
             pygame.display.flip()
 
 
 
     def draw_screen(self):
+
+        self.background.fill(self.background_color)
 
         #Draw the graph on the screen
         origin = (self.graph_surface.get_width()/2, self.graph_surface.get_height()/2 )
@@ -68,13 +84,18 @@ class MathPractice:
                 pygame.draw.line(self.graph_surface, self.graph_color, [0, distance * x], [self.graph_surface.get_height(), x * distance])
 
         #draw an enveloping circle if necessary
-        pygame.draw.circle(self.graph_surface, self.graph_color, origin, self.graph_surface.get_height() / 2, 1)
+        if self.graph.env_circle:
+            pygame.draw.circle(self.graph_surface, self.graph_color, origin, self.graph_surface.get_height() / 2, 1)
 
 
         #draw points on the graph
         for point in self.graph.point_list:
             pygame.draw.circle(self.graph_surface, self.point_color, (int(origin[0] + point.x_coord * distance),int(origin[1] - point.y_coord * distance)), self.point_size)
 
+
+    def resize_graph(self, length):
+        self.graph.length += length
+        self.point_size = int((-.2 * self.graph.length) + 12)
 
 class Graph:
     """Maintains the graph state"""
@@ -98,7 +119,10 @@ class Graph:
         self.point_list.append(point)
 
     def toggle_circle(self):
-        self.env_circle = -self.env_circle
+        if self.env_circle:
+            self.env_circle = False
+        else:
+            self.env_circle = True
 
 
 class Point:

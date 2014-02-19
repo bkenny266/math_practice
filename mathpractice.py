@@ -1,4 +1,4 @@
-import sys
+import sys, math
 import pygame
 from pygame.locals import *
 import color
@@ -17,8 +17,7 @@ class MathPractice:
         self.graph_size = 4
         self.graph_color = color.BLACK
         self.point_color = color.BLUE
-        #pause to admire y=mx+b making itself useful for scaling function
-        self.point_size = int((-.2 * self.graph_size) + 12)
+        self.line_color = color.RED
 
         #initialize display
         pygame.init()
@@ -28,12 +27,12 @@ class MathPractice:
         self.background = pygame.Surface(self.screen.get_size())
         self.background = self.background.convert()
 
-
         #initialize graph's subsurface
         self.graph = Graph(self.graph_size)
         offset_x = self.width - .9 * self.width
         offset_y = self.height -.9 * self.height
         self.graph_surface = self.background.subsurface(pygame.Rect(offset_x, offset_y, self.width - offset_x*2, self.height - offset_y*2))
+        self.resize_graph(self.graph_size)
 
 
 
@@ -71,30 +70,68 @@ class MathPractice:
         self.background.fill(self.background_color)
 
         #Draw the graph on the screen
-        origin = (self.graph_surface.get_width()/2, self.graph_surface.get_height()/2 )
-        distance = self.graph_surface.get_height() / self.graph.length
+        self.origin = (self.graph_surface.get_width()/2, self.graph_surface.get_height()/2 )
+        self.distance = self.graph_surface.get_height() / self.graph.length
         pygame.draw.rect(self.graph_surface, self.graph_color, (0, 0, self.graph_surface.get_width(), self.graph_surface.get_height()), 1)
         for x in range(0, self.graph.length):
             #heavier lines drawn in the middle to indicate x and y axis
             if x == self.graph.length/2:
-                pygame.draw.line(self.graph_surface, self.graph_color, [x * distance,0], [x * distance,self.graph_surface.get_width()], 5 )
-                pygame.draw.line(self.graph_surface, self.graph_color, [0, distance * x], [self.graph_surface.get_height(), x * distance], 5)
+                pygame.draw.line(self.graph_surface, self.graph_color, [x * self.distance,0], [x * self.distance,self.graph_surface.get_width()], 5 )
+                pygame.draw.line(self.graph_surface, self.graph_color, [0, self.distance * x], [self.graph_surface.get_height(), x * self.distance], 5)
             else:
-                pygame.draw.line(self.graph_surface, self.graph_color, [x * distance,0], [x * distance,self.graph_surface.get_width()] )
-                pygame.draw.line(self.graph_surface, self.graph_color, [0, distance * x], [self.graph_surface.get_height(), x * distance])
+                pygame.draw.line(self.graph_surface, self.graph_color, [x * self.distance,0], [x * self.distance,self.graph_surface.get_width()] )
+                pygame.draw.line(self.graph_surface, self.graph_color, [0, self.distance * x], [self.graph_surface.get_height(), x * self.distance])
 
         #draw an enveloping circle if necessary
         if self.graph.env_circle:
-            pygame.draw.circle(self.graph_surface, self.graph_color, origin, self.graph_surface.get_height() / 2, 1)
+            pygame.draw.circle(self.graph_surface, self.graph_color, self.origin, self.graph_surface.get_height() / 2, 1)
 
 
         #draw points on the graph
         for point in self.graph.point_list:
-            pygame.draw.circle(self.graph_surface, self.point_color, (int(origin[0] + point.x_coord * distance),int(origin[1] - point.y_coord * distance)), self.point_size)
+            pygame.draw.circle(self.graph_surface, self.point_color, self.get_coords(point.x_coord, point.y_coord), self.point_size)
 
+        #draw a line every 15 degrees
+            for deg in range(15, 375, 15):
+               self.draw_angle_from_origin(deg)
+
+    def get_coords(self, x, y):
+        return (int(self.origin[0] + x*self.distance), int(self.origin[1] - y*self.distance))
+
+    def draw_angle_from_origin(self, degrees):
+        x = 10
+        y = 10 * math.tan(math.radians(degrees % 90))
+
+        if degrees > 90 and degrees < 180:
+            temp = x
+            x = -y
+            y = temp
+        elif degrees > 180 and degrees < 270:
+            x = -x
+            y = -y
+        elif degrees > 270 and degrees < 360:
+            temp = x
+            x = y
+            y = -temp
+        elif degrees == 90:
+            x = 0
+            y = 10
+        elif degrees == 180:
+            x = -x
+            y = 0
+        elif degrees == 270:
+            y = -10
+            x = 0
+        elif degrees == 360:
+            y = 0
+            x = 10
+
+        pygame.draw.line(self.graph_surface, self.line_color, self.origin, self.get_coords(x, y), 5)
 
     def resize_graph(self, length):
+        #use this function to scale the graph
         self.graph.length += length
+        #pause to admire y=mx+b making itself useful for point scaling function
         self.point_size = int((-.2 * self.graph.length) + 12)
 
 class Graph:
